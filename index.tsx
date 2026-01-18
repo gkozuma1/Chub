@@ -9,12 +9,15 @@ interface FileData {
   size: number;
 }
 
+type DemandStatus = 'Pendente' | 'Em Edição' | 'Finalizado';
+
 interface Demand {
   id: string;
   patientName: string;
   sendDate: string;
   createdAt: string;
   files: FileData[];
+  status: DemandStatus;
 }
 
 const CreativeHub = () => {
@@ -77,7 +80,8 @@ const CreativeHub = () => {
         patientName,
         sendDate,
         createdAt: new Date().toISOString(),
-        files: processedFiles
+        files: processedFiles,
+        status: 'Pendente'
       };
 
       setDemands([newDemand, ...demands]);
@@ -91,6 +95,10 @@ const CreativeHub = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateDemandStatus = (id: string, newStatus: DemandStatus) => {
+    setDemands(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
   };
 
   const downloadZip = async (demand: Demand) => {
@@ -115,6 +123,15 @@ const CreativeHub = () => {
   const deleteDemand = (id: string) => {
     if (confirm('Deseja excluir esta demanda permanentemente?')) {
       setDemands(demands.filter(d => d.id !== id));
+    }
+  };
+
+  const getStatusStyles = (status: DemandStatus) => {
+    switch (status) {
+      case 'Pendente': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'Em Edição': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Finalizado': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
@@ -233,7 +250,7 @@ const CreativeHub = () => {
             <header className="mb-8 flex justify-between items-end">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Painel de Gestão</h2>
-                <p className="text-slate-500">Visualize e baixe os materiais enviados pelos clientes.</p>
+                <p className="text-slate-500">Visualize, gerencie status e baixe os materiais.</p>
               </div>
               <div className="text-right">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total de Demandas</span>
@@ -255,7 +272,12 @@ const CreativeHub = () => {
                         <i className="fas fa-user-injured text-xl"></i>
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-800">{demand.patientName}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-slate-800">{demand.patientName}</h3>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getStatusStyles(demand.status)}`}>
+                            {demand.status}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-3 text-sm text-slate-500">
                           <span className="flex items-center gap-1">
                             <i className="far fa-calendar"></i> {demand.sendDate}
@@ -267,17 +289,31 @@ const CreativeHub = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase px-1">Alterar Status</label>
+                        <select 
+                          value={demand.status}
+                          onChange={(e) => updateDemandStatus(demand.id, e.target.value as DemandStatus)}
+                          className="text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                        >
+                          <option value="Pendente">Pendente</option>
+                          <option value="Em Edição">Em Edição</option>
+                          <option value="Finalizado">Finalizado</option>
+                        </select>
+                      </div>
+
                       <button 
                         onClick={() => downloadZip(demand)}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
                       >
                         <i className="fas fa-file-archive"></i>
-                        Baixar Arquivos
+                        ZIP
                       </button>
+                      
                       <button 
                         onClick={() => deleteDemand(demand.id)}
-                        className="p-2.5 text-slate-400 hover:text-red-500 transition-colors"
+                        className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                         title="Excluir"
                       >
                         <i className="far fa-trash-alt"></i>
